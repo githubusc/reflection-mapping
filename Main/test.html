@@ -1,0 +1,143 @@
+<html>
+	<head>
+		<title>
+			CS580 - Final project
+		</title>
+		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.js"></script>
+		<script type="text/javascript" src="/projects/qtip/js/jquery.qtip-1.0.0.min.js"></script>
+		<script type="text/javascript">
+			$(document).ready(function(){
+			$("ul.thumb li").hover(function() {
+				$(this).css({'z-index' : '10'}); /*Add a higher z-index value so this image stays on top*/ 
+				$(this).find('img').addClass("hover").stop() /* Add class of "hover", then stop animation queue buildup*/
+				.animate({
+					width: '80px', /* Set new width */
+					height: '80px', /* Set new height */
+					padding: '5px'
+				}, 400); /* this value of "200" is the speed of how fast/slow this hover animates */
+
+				} , function() {
+				$(this).css({'z-index' : '0'}); /* Set z-index back to 0 */
+				$(this).find('img').removeClass("hover").stop()  /* Remove the "hover" class , then stop animation queue buildup*/
+				.animate({
+					width: '70px', /* Set width back to default */
+					height: '70px', /* Set height back to default */
+					padding: '2px'
+				}, 200);
+			});
+			});
+		</script>
+	</head>
+<body>
+	<div class="container">
+		<div class="main"></div>
+		<div class="models">
+			<ul class="thumb">
+				<li><a href="#"><img src="" alt="Model" /></a></li>
+				<li><a href="#"><img src="" alt="" /></a></li>
+				<li><a href="#"><img src="" alt="" /></a></li>
+			</ul>
+			<ul class="thumb">
+				<li><a href="#"><img src="" alt="" /></a></li>
+				<li><a href="#"><img src="" alt="" /></a></li>
+				<li><a href="#"><img src="" alt="" /></a></li>
+			</ul>
+			<ul class="thumb">
+				<li><a href="#"><img src="" alt="" /></a></li>
+				<li><a href="#"><img src="" alt="" /></a></li>
+				<li><a href="#"><img src="" alt="" /></a></li>
+			</ul>
+		</div>
+		<div class="environments">
+			<ul class="thumb">
+				<li><a href="#"><img src="" alt="Environment" /></a></li>
+				<li><a href="#"><img src="" alt="" /></a></li>
+				<li><a href="#"><img src="" alt="" /></a></li>
+			</ul>
+			<ul class="thumb">
+				<li><a href="#"><img src="" alt="" /></a></li>
+				<li><a href="#"><img src="" alt="" /></a></li>
+				<li><a href="#"><img src="" alt="" /></a></li>
+			</ul>
+			<ul class="thumb">
+				<li><a href="#"><img src="" alt="" /></a></li>
+				<li><a href="#"><img src="" alt="" /></a></li>
+				<li><a href="#"><img src="" alt="" /></a></li>
+			</ul>
+		</div>
+	</div>
+</body>
+<style type="text/css">
+	body
+	{
+		overflow: hidden;
+		background-color: #FFF;
+	}
+	
+	.main
+	{
+		border-style: solid;
+		border-width: 1.0px;
+		border-color: black;
+		margin-left: 3%;
+		margin-top: 3%;
+		width: 68%;
+		height: 90%;
+	}
+	
+	.models
+	{
+		border-style: solid;
+		border-width: 2px;
+		border-color: red;
+		margin-left: 73%;
+		margin-top: -43%;
+		padding: 5;
+		width: 25%;
+		height: 40%;
+		overflow: auto;
+	}
+	
+	.environments
+	{
+		border-style: solid;
+		border-width: 2px;
+		border-color: red;
+		margin-left: 73%;
+		margin-top: 2%;
+		padding: 5;
+		width: 25%;
+		height: 40%;
+		overflow: auto;
+	}
+	/* CSS for Image Effects 
+		Reference: http://www.sohtanaka.com/web-design/fancy-thumbnail-hover-effect-w-jquery/
+	*/
+	ul.thumb {
+		float: left;
+		list-style: none;
+		margin: 0; padding: 8px;
+		width: 300px;
+	}
+	ul.thumb li {
+		margin: 0; padding: 40px;
+		float: left;
+		position: relative;  /* Set the absolute positioning base coordinate */
+		width: 20px;
+		height: 20px;
+	}
+ul.thumb li img {
+		width: 70px; height: 70px; /* Set the small thumbnail size */
+		-ms-interpolation-mode: bicubic; /* IE Fix for Bicubic Scaling */
+		border: 1px solid #ddd;
+		padding: 1px;
+		background: #f0f0f0;
+		position: absolute;
+		left: 0; top: 0;
+	}
+ul.thumb li img.hover {
+	/*background:url(thumb_bg.png) no-repeat center center;  /* Image used as background on hover effect
+	border: none; Get rid of border on hover */
+}
+</style>
+</html>
