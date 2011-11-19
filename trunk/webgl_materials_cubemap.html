@@ -1,38 +1,117 @@
 <!doctype html>
 <html lang="en">
 	<head>
-		<title>three.js webgl - materials - cube reflection / refraction [Walt]</title>
+		<title> CS580 - Final project </title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-				background:#000;
-				color:#fff;
-				padding:0;
-				margin:0;
-				overflow:hidden;
-				font-family:georgia;
-				text-align:center;
-			}
-			a {	color: #ff0080;	text-decoration: none; }
-			a:hover { color: #0080ff; }
+		
+		
+		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.js"></script>
+		<script type="text/javascript" src="/projects/qtip/js/jquery.qtip-1.0.0.min.js"></script>
+		<script type="text/javascript">
+			$(document).ready(function() {
+				$("ul.thumb li").hover(function() {
+					$(this).css({
+						'z-index' : '10'
+					});
+					/*Add a higher z-index value so this image stays on top*/
+					$(this).find('img').addClass("hover").stop()/* Add class of "hover", then stop animation queue buildup*/.animate({
+						width : '80px', /* Set new width */
+						height : '80px', /* Set new height */
+						padding : '5px'
+					}, 400);
+					/* this value of "200" is the speed of how fast/slow this hover animates */
 
-			canvas { pointer-events:none; z-index:10; }
+				}, function() {
+					$(this).css({
+						'z-index' : '0'
+					});
+					/* Set z-index back to 0 */
+					$(this).find('img').removeClass("hover").stop()/* Remove the "hover" class , then stop animation queue buildup*/.animate({
+						width : '70px', /* Set width back to default */
+						height : '70px', /* Set height back to default */
+						padding : '2px'
+					}, 200);
+				});
+			});
 
-			#d { text-align:center; margin:1em 0 -7.5em 0; z-index:1000; position:relative; display:block }
-			.button { background:orange; color:#fff; padding:0.2em 0.5em; cursor:pointer }
-			.inactive { background:#999; color:#eee }
-
-			#oldie { margin-top:11em !important }
-		</style>
+		</script>
+		
 	</head>
 
 	<body>
-		<div id="d">
-			<p><a href="http://github.com/mrdoob/three.js">Three.js</a> cube mapping demo
-
-			<p>Walt Disney head by <a href="http://www.davidoreilly.com/2009/01/walt-disneys-head-on-a-plate" target="_blank">David OReilly</a>
-			<p>Texture by <a href="http://www.humus.name/index.php?page=Textures" target="_blank">Humus</a>
+		<div class="container">
+			<div class="main" id = "webgl-canvas"></div>
+			<div class="models">
+				<ul class="thumb">
+					<li>
+						<a href="#"><img src="" alt="Model" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+				</ul>
+				<ul class="thumb">
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+				</ul>
+				<ul class="thumb">
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+				</ul>
+			</div>
+			<div class="environments">
+				<ul class="thumb">
+					<li>
+						<a href="#"><img src="" alt="Environment" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+				</ul>
+				<ul class="thumb">
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+				</ul>
+				<ul class="thumb">
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="" /></a>
+					</li>
+				</ul>
+			</div>
 		</div>
 
 		<script src="js/Three.js"></script>
@@ -59,23 +138,25 @@
 			var mouseX = 0;
 			var mouseY = 0;
 			var isMouseDown = false;
-			var onMouseDownPosition, radious = 2000, theta = 45, onMouseDownTheta = 45, phi = 60, onMouseDownPhi = 60;
+			
+			var onMouseDownPosition, 
+			    radious = 2000, 
+			    theta = 45, 
+			    onMouseDownTheta = 45, 
+			    phi = 60, 
+			    onMouseDownPhi = 60;
 
 			var windowHalfX = window.innerWidth / 2;
 			var windowHalfY = window.innerHeight / 2;
-
-			document.addEventListener('mousemove', onDocumentMouseMove, false);
-			document.addEventListener('mousedown', onDocumentMouseDown, false);
-			document.addEventListener('mouseup', onDocumentMouseUp, false);
-			document.addEventListener('mousewheel', onDocumentMouseWheel, false);
-			document.addEventListener('DOMMouseScroll', onDocumentMouseWheel, false);
 
 			init();
 			animate();
 
 			function init() {
-				container = document.createElement('div');
-				document.body.appendChild(container);
+				//container = document.createElement('div');
+				//document.body.appendChild(container);
+				container = document.getElementById("webgl-canvas")
+				
 				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
 				camera.position.x = radious * Math.sin(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
 				camera.position.y = radious * Math.sin(phi * Math.PI / 360);
@@ -146,7 +227,7 @@
 				//
 
 				renderer = new THREE.WebGLRenderer();
-				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.setSize(window.innerWidth*0.7, window.innerHeight*0.9);
 				renderer.autoClear = false;
 				container.appendChild(renderer.domElement);
 
@@ -168,7 +249,13 @@
 					callback : function(geometry) { createScene(geometry, cubeMaterial1, cubeMaterial2, cubeMaterial3)
 					}
 				});
-
+				
+				
+				document.addEventListener('mousemove', onDocumentMouseMove, false);
+				container.addEventListener('mousedown', onDocumentMouseDown, false);
+				document.addEventListener('mouseup', onDocumentMouseUp, false);
+				document.addEventListener('mousewheel', onDocumentMouseWheel, false);
+				document.addEventListener('DOMMouseScroll', onDocumentMouseWheel, false);
 			}
 
 			function createScene(geometry, m1, m2, m3) {
@@ -277,4 +364,79 @@
 		</script>
 
 	</body>
+	
+	<style type="text/css">
+body
+{
+overflow: hidden;
+background-color: #000;
+}
+
+.main
+{
+border-style: solid;
+border-width: 1.0px;
+border-color: black;
+margin-left: 0%;
+margin-top: 0%;
+width: 70%;
+height: 70%;
+overflow: hidden;
+}
+
+.models
+{
+border-style: solid;
+border-width: 2px;
+border-color: black;
+margin-left: 73%;
+margin-top: -50%;
+padding: 5px;
+width: 25%;
+height: 38%;
+overflow: auto;
+}
+
+.environments
+{
+border-style: solid;
+border-width: 2px;
+border-color: black;
+margin-left: 73%;
+margin-top: -1%;
+padding: 5px;
+width: 25%;
+height: 38%;
+overflow: auto;
+}
+/* CSS for Image Effects
+Reference: http://www.sohtanaka.com/web-design/fancy-thumbnail-hover-effect-w-jquery/
+*/
+ul.thumb {
+float: left;
+list-style: none;
+margin: 0; padding: 8px;
+width: 300px;
+}
+ul.thumb li {
+margin: 0; padding: 40px;
+float: left;
+position: relative;  /* Set the absolute positioning base coordinate */
+width: 20px;
+height: 20px;
+}
+ul.thumb li img {
+width: 70px; height: 70px; /* Set the small thumbnail size */
+-ms-interpolation-mode: bicubic; /* IE Fix for Bicubic Scaling */
+border: 1px solid #ddd;
+padding: 1px;
+background: #f0f0f0;
+position: absolute;
+left: 0; top: 0;
+}
+ul.thumb li img.hover {
+/*background:url(thumb_bg.png) no-repeat center center;  /* Image used as background on hover effect
+border: none; Get rid of border on hover */
+}
+	</style>
 </html>
