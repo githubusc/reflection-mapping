@@ -8,6 +8,9 @@
 		
 		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.js"></script>
 		<script type="text/javascript" src="/projects/qtip/js/jquery.qtip-1.0.0.min.js"></script>
+		<script src="js/Three.js"></script>
+		<script src="js/Detector.js"></script>
+		<script src="js/RequestAnimationFrame.js"></script>
 		<script type="text/javascript">
 			$(document).ready(function() {
 				$("ul.thumb li").hover(function() {
@@ -33,6 +36,242 @@
 						padding : '2px'
 					}, 200);
 				});
+				
+			if(!Detector.webgl)
+				Detector.addGetWebGLMessage();
+
+			var container;
+
+			var camera, scene, renderer;
+			var cameraCube, sceneCube, cubeTarget;
+
+			var mesh, zmesh, lightMesh, geometry;
+
+			var loader;
+
+			var directionalLight, pointLight;
+
+			var mouseX = 0;
+			var mouseY = 0;
+			var isMouseDown = false;
+			
+			var onMouseDownPosition, 
+			    radious = 2000, 
+			    theta = 45, 
+			    onMouseDownTheta = 45, 
+			    phi = 60, 
+			    onMouseDownPhi = 60;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+			init();
+			animate();
+
+			function init() {
+				container = document.getElementById("webgl-canvas")
+				
+				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
+				camera.position.x = radious * Math.sin(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+				camera.position.y = radious * Math.sin(phi * Math.PI / 360);
+				camera.position.z = radious * Math.cos(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+				cameraCube = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 100);
+				cubeTarget = new THREE.Vector3(0, 0, 0);
+				scene = new THREE.Scene();
+				sceneCube = new THREE.Scene();
+				onMouseDownPosition = new THREE.Vector2();
+
+				// LIGHTS
+
+				var ambient = new THREE.AmbientLight(0xffffff);
+				scene.add(ambient);
+				pointLight = new THREE.PointLight(0xffffff, 2);
+				scene.add(pointLight);
+
+				// light representation
+
+				sphere = new THREE.SphereGeometry(100, 16, 8);
+				lightMesh = new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({
+					color : 0xffaa00
+				}));
+				lightMesh.position = pointLight.position;
+				lightMesh.scale.x = lightMesh.scale.y = lightMesh.scale.z = 0.05;
+				scene.add(lightMesh);
+
+				var path = "textures/cube/SwedishRoyalCastle/";
+				var format = '.jpg';
+				var urls = [path + 'px' + format, path + 'nx' + format, path + 'py' + format, path + 'ny' + format, path + 'pz' + format, path + 'nz' + format];
+
+				var reflectionCube = THREE.ImageUtils.loadTextureCube(urls);
+				var refractionCube = new THREE.Texture(reflectionCube.image, new THREE.CubeRefractionMapping());
+
+				var cubeMaterial3 = new THREE.MeshPhongMaterial( { color: 0x000000, specular:0xaa0000, envMap: reflectionCube, combine: THREE.MixOperation, reflectivity: 0.25 } );
+				/*var cubeMaterial3 = new THREE.MeshLambertMaterial({
+					color : 0xff6600,
+					envMap : reflectionCube,
+					combine : THREE.MixOperation,
+					reflectivity : 0.5
+				});*/
+				var cubeMaterial2 = new THREE.MeshLambertMaterial({
+					color : 0xffee00,
+					envMap : refractionCube,
+					refractionRatio : 0.95
+				});
+				var cubeMaterial1 = new THREE.MeshLambertMaterial({
+					color : 0xffffff,
+					envMap : reflectionCube
+				})
+
+				// Skybox
+
+				var shader = THREE.ShaderUtils.lib["cube"];
+				shader.uniforms["tCube"].texture = reflectionCube;
+
+				var material = new THREE.ShaderMaterial({
+
+					fragmentShader : shader.fragmentShader,
+					vertexShader : shader.vertexShader,
+					uniforms : shader.uniforms,
+					depthWrite : false
+
+				}), mesh = new THREE.Mesh(new THREE.CubeGeometry(100, 100, 100), material);
+				mesh.flipSided = true;
+				sceneCube.add(mesh);
+
+				//
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize(window.innerWidth*0.7, window.innerHeight*0.9);
+				renderer.autoClear = false;
+				container.appendChild(renderer.domElement);
+
+				//
+
+				loader = new THREE.BinaryLoader(true);
+				document.body.appendChild(loader.statusDomElement);
+
+				loader.load({
+					model : "obj/walt/WaltHead_bin.js",
+					callback : function(geometry) { createScene(geometry, cubeMaterial1, cubeMaterial2, cubeMaterial3)
+					}
+				});
+				
+				
+				document.addEventListener('mousemove', onDocumentMouseMove, false);
+				container.addEventListener('mousedown', onDocumentMouseDown, false);
+				document.addEventListener('mouseup', onDocumentMouseUp, false);
+				document.addEventListener('mousewheel', onDocumentMouseWheel, false);
+				document.addEventListener('DOMMouseScroll', onDocumentMouseWheel, false);
+			}
+
+			function createScene(geometry, m1, m2, m3) {
+
+				var s = 15;
+				
+				var mesh = new THREE.Mesh(new THREE.CubeGeometry(300, 300, 300), m3);
+		        mesh.position.x = -900;
+				mesh.position.z = -100;
+        		scene.add(mesh);
+        
+				var mesh = new THREE.Mesh(geometry, m1);
+				mesh.position.z = -100;
+				mesh.scale.x = mesh.scale.y = mesh.scale.z = s;
+				scene.add(mesh);
+
+				/*var mesh = new THREE.Mesh(geometry, m2);
+				mesh.position.x = -900;
+				mesh.position.z = -100;
+				mesh.scale.x = mesh.scale.y = mesh.scale.z = s;
+				scene.add(mesh);*/
+
+				/*var mesh = new THREE.Mesh(geometry, m3);
+				mesh.position.x = 900;
+				mesh.position.z = -100;
+				mesh.scale.x = mesh.scale.y = mesh.scale.z = s;
+				scene.add(mesh);*/
+
+				loader.statusDomElement.style.display = "none";
+
+			}
+
+			function onDocumentMouseDown(event) {
+				event.preventDefault();
+				isMouseDown = true;
+				onMouseDownTheta = theta;
+				onMouseDownPhi = phi;
+				onMouseDownPosition.x = event.clientX;
+				onMouseDownPosition.y = event.clientY;
+			}
+
+			function onDocumentMouseMove(event) {
+				if(isMouseDown) {
+					theta = -((event.clientX - onMouseDownPosition.x ) * 0.5 ) + onMouseDownTheta;
+					phi = ((event.clientY - onMouseDownPosition.y ) * 0.5 ) + onMouseDownPhi;
+					phi = Math.min(90, Math.max(-90, phi));
+
+					//mouseX = (event.clientX - windowHalfX ) * 4;
+					//mouseY = (event.clientY - windowHalfY ) * 4;
+				}
+			}
+
+			function onDocumentMouseUp(event) {
+				event.preventDefault();
+				isMouseDown = false;
+				//onMouseDownPosition.x = event.clientX - onMouseDownPosition.x;
+				//onMouseDownPosition.y = event.clientY - onMouseDownPosition.y;
+			}
+
+			function onDocumentMouseWheel(event) {
+				if(event.wheelDeltaY) {
+					radious -= event.wheelDeltaY * 1;
+					// Opera / Explorer 9
+				} else if(event.wheelDelta) {
+					radious -= event.wheelDelta * 1;
+					// Firefox
+				} else if(event.detail) {
+					radious += event.detail * 10.0;
+				}
+				radious = Math.min(3500, Math.max(1000, radious));
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame(animate);
+
+				render();
+
+			}
+
+			function render() {
+
+				var timer = -new Date().getTime() * 0.0002;
+				
+				camera.position.x = radious * Math.sin(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+				camera.position.y = radious * Math.sin(phi * Math.PI / 360);
+				camera.position.z = radious * Math.cos(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+				camera.updateMatrix();
+				//camera.position.x += (mouseX - camera.position.x ) * .05;
+				//camera.position.y += (-mouseY - camera.position.y ) * .05;
+
+				camera.lookAt(scene.position);
+
+				cubeTarget.x = -camera.position.x;
+				cubeTarget.y = -camera.position.y;
+				cubeTarget.z = -camera.position.z;
+
+				cameraCube.lookAt(cubeTarget);
+
+				lightMesh.position.x = 1500 * Math.cos(timer);
+				lightMesh.position.z = 1500 * Math.sin(timer);
+
+				renderer.clear();
+				renderer.render(sceneCube, cameraCube);
+				renderer.render(scene, camera);
+
+			}
+				
 			});
 
 		</script>
@@ -40,8 +279,8 @@
 	</head>
 
 	<body>
-		<div class="container">
-			<div class="main" id = "webgl-canvas"></div>
+		<div id = "webgl-canvas">
+		</div>
 			<div class="models">
 				<ul class="thumb">
 					<li>
@@ -112,276 +351,25 @@
 					</li>
 				</ul>
 			</div>
-		</div>
-
-		<script src="js/Three.js"></script>
-
-		<script src="js/Detector.js"></script>
-		<script src="js/RequestAnimationFrame.js"></script>
-		<script src="js/Stats.js"></script>
-
-		<script>
-			if(!Detector.webgl)
-				Detector.addGetWebGLMessage();
-
-			var container, stats;
-
-			var camera, scene, renderer;
-			var cameraCube, sceneCube, cubeTarget;
-
-			var mesh, zmesh, lightMesh, geometry;
-
-			var loader;
-
-			var directionalLight, pointLight;
-
-			var mouseX = 0;
-			var mouseY = 0;
-			var isMouseDown = false;
-			
-			var onMouseDownPosition, 
-			    radious = 2000, 
-			    theta = 45, 
-			    onMouseDownTheta = 45, 
-			    phi = 60, 
-			    onMouseDownPhi = 60;
-
-			var windowHalfX = window.innerWidth / 2;
-			var windowHalfY = window.innerHeight / 2;
-
-			init();
-			animate();
-
-			function init() {
-				//container = document.createElement('div');
-				//document.body.appendChild(container);
-				container = document.getElementById("webgl-canvas")
-				
-				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
-				camera.position.x = radious * Math.sin(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
-				camera.position.y = radious * Math.sin(phi * Math.PI / 360);
-				camera.position.z = radious * Math.cos(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
-				cameraCube = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 100);
-				cubeTarget = new THREE.Vector3(0, 0, 0);
-				scene = new THREE.Scene();
-				sceneCube = new THREE.Scene();
-				onMouseDownPosition = new THREE.Vector2();
-
-				// LIGHTS
-
-				var ambient = new THREE.AmbientLight(0xffffff);
-				scene.add(ambient);
-				pointLight = new THREE.PointLight(0xffffff, 2);
-				scene.add(pointLight);
-
-				// light representation
-
-				sphere = new THREE.SphereGeometry(100, 16, 8);
-				lightMesh = new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({
-					color : 0xffaa00
-				}));
-				lightMesh.position = pointLight.position;
-				lightMesh.scale.x = lightMesh.scale.y = lightMesh.scale.z = 0.05;
-				scene.add(lightMesh);
-
-				var path = "textures/cube/SwedishRoyalCastle/";
-				var format = '.jpg';
-				var urls = [path + 'px' + format, path + 'nx' + format, path + 'py' + format, path + 'ny' + format, path + 'pz' + format, path + 'nz' + format];
-
-				var reflectionCube = THREE.ImageUtils.loadTextureCube(urls);
-				var refractionCube = new THREE.Texture(reflectionCube.image, new THREE.CubeRefractionMapping());
-
-				//var cubeMaterial3 = new THREE.MeshPhongMaterial( { color: 0x000000, specular:0xaa0000, envMap: reflectionCube, combine: THREE.MixOperation, reflectivity: 0.25 } );
-				var cubeMaterial3 = new THREE.MeshLambertMaterial({
-					color : 0xff6600,
-					envMap : reflectionCube,
-					combine : THREE.MixOperation,
-					reflectivity : 0.3
-				});
-				var cubeMaterial2 = new THREE.MeshLambertMaterial({
-					color : 0xffee00,
-					envMap : refractionCube,
-					refractionRatio : 0.95
-				});
-				var cubeMaterial1 = new THREE.MeshLambertMaterial({
-					color : 0xffffff,
-					envMap : reflectionCube
-				})
-
-				// Skybox
-
-				var shader = THREE.ShaderUtils.lib["cube"];
-				shader.uniforms["tCube"].texture = reflectionCube;
-
-				var material = new THREE.ShaderMaterial({
-
-					fragmentShader : shader.fragmentShader,
-					vertexShader : shader.vertexShader,
-					uniforms : shader.uniforms,
-					depthWrite : false
-
-				}), mesh = new THREE.Mesh(new THREE.CubeGeometry(100, 100, 100), material);
-				mesh.flipSided = true;
-				sceneCube.add(mesh);
-
-				//
-
-				renderer = new THREE.WebGLRenderer();
-				renderer.setSize(window.innerWidth*0.7, window.innerHeight*0.9);
-				renderer.autoClear = false;
-				container.appendChild(renderer.domElement);
-
-				//
-
-				stats = new Stats();
-				stats.domElement.style.position = 'absolute';
-				stats.domElement.style.top = '0px';
-				stats.domElement.style.zIndex = 100;
-				container.appendChild(stats.domElement);
-
-				//
-
-				loader = new THREE.BinaryLoader(true);
-				document.body.appendChild(loader.statusDomElement);
-
-				loader.load({
-					model : "obj/walt/WaltHead_bin.js",
-					callback : function(geometry) { createScene(geometry, cubeMaterial1, cubeMaterial2, cubeMaterial3)
-					}
-				});
-				
-				
-				document.addEventListener('mousemove', onDocumentMouseMove, false);
-				container.addEventListener('mousedown', onDocumentMouseDown, false);
-				document.addEventListener('mouseup', onDocumentMouseUp, false);
-				document.addEventListener('mousewheel', onDocumentMouseWheel, false);
-				document.addEventListener('DOMMouseScroll', onDocumentMouseWheel, false);
-			}
-
-			function createScene(geometry, m1, m2, m3) {
-
-				var s = 15;
-
-				var mesh = new THREE.Mesh(geometry, m1);
-				mesh.position.z = -100;
-				mesh.scale.x = mesh.scale.y = mesh.scale.z = s;
-				scene.add(mesh);
-
-				var mesh = new THREE.Mesh(geometry, m2);
-				mesh.position.x = -900;
-				mesh.position.z = -100;
-				mesh.scale.x = mesh.scale.y = mesh.scale.z = s;
-				scene.add(mesh);
-
-				var mesh = new THREE.Mesh(geometry, m3);
-				mesh.position.x = 900;
-				mesh.position.z = -100;
-				mesh.scale.x = mesh.scale.y = mesh.scale.z = s;
-				scene.add(mesh);
-
-				loader.statusDomElement.style.display = "none";
-
-			}
-
-			function onDocumentMouseDown(event) {
-				event.preventDefault();
-				isMouseDown = true;
-				onMouseDownTheta = theta;
-				onMouseDownPhi = phi;
-				onMouseDownPosition.x = event.clientX;
-				onMouseDownPosition.y = event.clientY;
-			}
-
-			function onDocumentMouseMove(event) {
-				if(isMouseDown) {
-					theta = -((event.clientX - onMouseDownPosition.x ) * 0.5 ) + onMouseDownTheta;
-					phi = ((event.clientY - onMouseDownPosition.y ) * 0.5 ) + onMouseDownPhi;
-					phi = Math.min(90, Math.max(-90, phi));
-
-					//mouseX = (event.clientX - windowHalfX ) * 4;
-					//mouseY = (event.clientY - windowHalfY ) * 4;
-				}
-			}
-
-			function onDocumentMouseUp(event) {
-				event.preventDefault();
-				isMouseDown = false;
-				//onMouseDownPosition.x = event.clientX - onMouseDownPosition.x;
-				//onMouseDownPosition.y = event.clientY - onMouseDownPosition.y;
-			}
-
-			function onDocumentMouseWheel(event) {
-				if(event.wheelDeltaY) {
-					radious -= event.wheelDeltaY * 1;
-					// Opera / Explorer 9
-				} else if(event.wheelDelta) {
-					radious -= event.wheelDelta * 1;
-					// Firefox
-				} else if(event.detail) {
-					radious += event.detail * 10.0;
-				}
-				radious = Math.min(3500, Math.max(1000, radious));
-			}
-
-			//
-
-			function animate() {
-
-				requestAnimationFrame(animate);
-
-				render();
-				stats.update();
-
-			}
-
-			function render() {
-
-				var timer = -new Date().getTime() * 0.0002;
-				
-				camera.position.x = radious * Math.sin(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
-				camera.position.y = radious * Math.sin(phi * Math.PI / 360);
-				camera.position.z = radious * Math.cos(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
-				camera.updateMatrix();
-				//camera.position.x += (mouseX - camera.position.x ) * .05;
-				//camera.position.y += (-mouseY - camera.position.y ) * .05;
-
-				camera.lookAt(scene.position);
-
-				cubeTarget.x = -camera.position.x;
-				cubeTarget.y = -camera.position.y;
-				cubeTarget.z = -camera.position.z;
-
-				cameraCube.lookAt(cubeTarget);
-
-				lightMesh.position.x = 1500 * Math.cos(timer);
-				lightMesh.position.z = 1500 * Math.sin(timer);
-
-				renderer.clear();
-				renderer.render(sceneCube, cameraCube);
-				renderer.render(scene, camera);
-
-			}
-		</script>
-
 	</body>
 	
 	<style type="text/css">
 body
 {
 overflow: hidden;
-background-color: #000;
+background-color: #FFF;
 }
 
-.main
+#webgl-canvas
 {
-border-style: solid;
+/*border-style: solid;
 border-width: 1.0px;
 border-color: black;
+width: 896;
+height: 578;
+overflow: hidden;*/
 margin-left: 0%;
-margin-top: 0%;
-width: 70%;
-height: 70%;
-overflow: hidden;
+margin-top: 2%;
 }
 
 .models
@@ -389,12 +377,12 @@ overflow: hidden;
 border-style: solid;
 border-width: 2px;
 border-color: black;
-margin-left: 73%;
-margin-top: -50%;
+margin-left: 910px;
+margin-top: -535px;
 padding: 5px;
-width: 25%;
-height: 38%;
-overflow: auto;
+width: 310px;
+height: 230px;
+overflow: scroll;
 }
 
 .environments
@@ -402,12 +390,12 @@ overflow: auto;
 border-style: solid;
 border-width: 2px;
 border-color: black;
-margin-left: 73%;
-margin-top: -1%;
+margin-left: 910px;
+margin-top: 30px;
 padding: 5px;
-width: 25%;
-height: 38%;
-overflow: auto;
+width: 310px;
+height: 230px;
+overflow: scroll;
 }
 /* CSS for Image Effects
 Reference: http://www.sohtanaka.com/web-design/fancy-thumbnail-hover-effect-w-jquery/
