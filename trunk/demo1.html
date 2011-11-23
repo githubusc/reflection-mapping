@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<title> CS580 - Final project </title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		
+		
+		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.js"></script>
+		<script type="text/javascript" src="/projects/qtip/js/jquery.qtip-1.0.0.min.js"></script>
+		<script type="text/javascript">
+			$(document).ready(function() {
+				$("ul.thumb li").hover(function() {
+					$(this).css({
+						'z-index' : '10'
+					});
+					/*Add a higher z-index value so this image stays on top*/
+					$(this).find('img').addClass("hover").stop()/* Add class of "hover", then stop animation queue buildup*/.animate({
+						width : '80px', /* Set new width */
+						height : '80px', /* Set new height */
+						padding : '5px'
+					}, 400);
+					/* this value of "200" is the speed of how fast/slow this hover animates */
+
+				}, function() {
+					$(this).css({
+						'z-index' : '0'
+					});
+					/* Set z-index back to 0 */
+					$(this).find('img').removeClass("hover").stop()/* Remove the "hover" class , then stop animation queue buildup*/.animate({
+						width : '70px', /* Set width back to default */
+						height : '70px', /* Set height back to default */
+						padding : '2px'
+					}, 200);
+				});
+			});
+
+		</script>
+		
+	</head>
+
+	<body>
+		<div class="container">
+			<div class="main" id = "webgl-canvas"></div>
+			<div class="models">
+				<ul class="thumb">
+					<li onclick="click(0);" value="0">
+						<a href="#"><img src="" alt="Sphere" /></a>
+					</li>
+					<li onclick="1" value="1">
+						<a href="#"><img src="" alt="Head" /></a>
+					</li>
+					<li onclick="2" value="2">
+						<a href="#"><img src="" alt="Ninja" /></a>
+					</li>
+				</ul>
+				<ul class="thumb">
+					<li onclick="3" value="3">
+						<a href="#"><img src="" alt="Woman" /></a>
+					</li>
+					<li onclick="4" value="4">
+						<a href="#"><img src="" alt="Man" /></a>
+					</li>
+					<li onclick="5" value="5">
+						<a href="#"><img src="" alt="Lucy" /></a>
+					</li>
+				</ul>
+				<ul class="thumb">
+					<li onclick="6" value="6">
+						<a href="#"><img src="" alt="Veyron" /></a>
+					</li>
+					<li onclick="7" value="7">
+						<a href="#"><img src="" alt="Camero" /></a>
+					</li>
+					<li onclick="8" value="8">
+						<a href="#"><img src="" alt="F50" /></a>
+					</li>
+				</ul>
+			</div>
+			<div class="environments">
+				<ul class="thumb">
+					<li>
+						<a href="#"><img src="" alt="Bridge" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="Escher" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="Park" /></a>
+					</li>
+				</ul>
+				<ul class="thumb">
+					<li>
+						<a href="#"><img src="" alt="Pisa" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="Sky" /></a>
+					</li>
+					<li>
+						<a href="#"><img src="" alt="Castle" /></a>
+					</li>
+				</ul>
+			</div>
+		</div>
+
+		<script src="js/Three.js"></script>
+
+		<script src="js/Detector.js"></script>
+		<script src="js/RequestAnimationFrame.js"></script>
+		<script src="js/Stats.js"></script>
+
+		<script>
+			if(!Detector.webgl)
+				Detector.addGetWebGLMessage();
+
+			var container, stats;
+
+			var camera, scene, renderer;
+			var cameraCube, sceneCube, cubeTarget;
+
+			var mesh, zmesh, lightMesh, geometry;
+
+			var loader;
+			
+			var spheres = [];
+
+			var directionalLight, pointLight;
+
+			var mouseX = 0;
+			var mouseY = 0;
+			var isMouseDown = false;
+			
+			var onMouseDownPosition, 
+			    radious = 2000, 
+			    theta = 45, 
+			    onMouseDownTheta = 45, 
+			    phi = 60, 
+			    onMouseDownPhi = 60;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+			
+			var objPath;
+			
+			var envTexture;
+
+			init();
+			animate();
+
+			function init() {
+				//container = document.createElement('div');
+				//document.body.appendChild(container);
+				container = document.getElementById("webgl-canvas")
+				
+				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
+				camera.position.x = radious * Math.sin(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+				camera.position.y = radious * Math.sin(phi * Math.PI / 360);
+				camera.position.z = radious * Math.cos(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+				cameraCube = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 100);
+				cubeTarget = new THREE.Vector3(0, 0, 0);
+				scene = new THREE.Scene();
+				sceneCube = new THREE.Scene();
+				onMouseDownPosition = new THREE.Vector2();
+
+				// LIGHTS
+
+				var ambient = new THREE.AmbientLight(0xffffff);
+				scene.add(ambient);
+				pointLight = new THREE.PointLight(0xffffff, 2);
+				scene.add(pointLight);
+
+				// light representation
+
+				sphere = new THREE.SphereGeometry(100, 16, 8);
+				lightMesh = new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({
+					color : 0xffaa00
+				}));
+				lightMesh.position = pointLight.position;
+				lightMesh.scale.x = lightMesh.scale.y = lightMesh.scale.z = 0.05;
+				scene.add(lightMesh);
+
+				var path = "textures/cube/SwedishRoyalCastle/";//"textures/cube/pisa/";
+				var format = '.jpg';
+				var urls = [path + 'px' + format, path + 'nx' + format, 
+				            path + 'py' + format, path + 'ny' + format, 
+				            path + 'pz' + format, path + 'nz' + format];
+
+				envTexture = THREE.ImageUtils.loadTextureCube(urls);
+				//var refractionCube = new THREE.Texture(reflectionCube.image, new THREE.CubeRefractionMapping());
+
+				//var cubeMaterial3 = new THREE.MeshPhongMaterial( { color: 0x000000, specular:0xaa0000, envMap: reflectionCube, combine: THREE.MixOperation, reflectivity: 0.25 } );
+				/*var cubeMaterial3 = new THREE.MeshLambertMaterial({
+					color : 0xff6600,
+					envMap : reflectionCube,
+					combine : THREE.MixOperation,
+					reflectivity : 0.3
+				});
+				
+				var cubeMaterial2 = new THREE.MeshLambertMaterial({
+					color : 0xffee00,
+					envMap : refractionCube,
+					refractionRatio : 0.95
+				});
+				*/			
+
+				// Skybox
+				skybox();
+				//
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize(window.innerWidth*0.7, window.innerHeight*0.9);
+				renderer.autoClear = false;
+				container.appendChild(renderer.domElement);
+
+				//
+
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				stats.domElement.style.zIndex = 100;
+				container.appendChild(stats.domElement);
+
+				loader = new THREE.BinaryLoader(true);
+				container.appendChild(loader.statusDomElement);
+				
+				// Load Model				
+				objPath = "obj/lucy/Lucy100k_bin.js";
+				loadModel();
+				
+				
+				document.addEventListener('mousemove', onDocumentMouseMove, false);
+				container.addEventListener('mousedown', onDocumentMouseDown, false);
+				document.addEventListener('mouseup', onDocumentMouseUp, false);
+				document.addEventListener('mousewheel', onDocumentMouseWheel, false);
+				document.addEventListener('DOMMouseScroll', onDocumentMouseWheel, false);
+			}
+			
+			function skybox () {
+				var shader = THREE.ShaderUtils.lib["cube"];
+				shader.uniforms["tCube"].texture = envTexture;
+
+				var material = new THREE.ShaderMaterial({
+
+					fragmentShader : shader.fragmentShader,
+					vertexShader : shader.vertexShader,
+					uniforms : shader.uniforms,
+					depthWrite : false
+
+				}), 
+				
+				skyMesh = new THREE.Mesh(new THREE.CubeGeometry(100, 100, 100), material);
+				skyMesh.flipSided = true;
+				sceneCube.add(skyMesh);			  
+			}
+			
+			function loadModel () {
+				var cubeMaterial1 = new THREE.MeshLambertMaterial({
+					color : 0xffffff,
+					envMap : envTexture
+				});				
+
+				loader.load({
+					model : objPath,
+					callback : function(geometry) { createScene(geometry, cubeMaterial1)
+					}
+				});		  
+			}
+			
+			function createBubble(material){
+				
+				var bubble = new THREE.SphereGeometry( 100, 32, 16 );
+				
+				for ( var i = 0; i < 100; i ++ ) {
+
+					var mesh = new THREE.Mesh( bubble, material );
+
+					mesh.position.x = Math.random() * 10000 - 5000;
+					mesh.position.y = Math.random() * 10000 - 5000;
+					mesh.position.z = Math.random() * 10000 - 5000;
+
+					mesh.scale.x = mesh.scale.y = mesh.scale.z = Math.random() * 3 + 1;
+
+					scene.add( mesh );
+
+					spheres.push( mesh );
+				}
+			}
+
+			function createScene(geometry, m1) {
+
+				var s = 1;
+
+				var mesh = new THREE.Mesh(geometry, m1);
+				mesh.position.z = -100;
+				//mesh.position.y = -1000
+				mesh.scale.x = mesh.scale.y = mesh.scale.z = s;
+				scene.add(mesh);
+				
+				/*
+				var mesh = new THREE.Mesh(geometry, m2);
+				mesh.position.x = -900;
+				mesh.position.z = -100;
+				mesh.scale.x = mesh.scale.y = mesh.scale.z = s;
+				scene.add(mesh);
+				
+				var mesh = new THREE.Mesh(geometry, m3);
+				mesh.position.x = 900;
+				mesh.position.z = -100;
+				mesh.scale.x = mesh.scale.y = mesh.scale.z = s;
+				scene.add(mesh);
+				*/
+				createBubble(m1);
+
+				loader.statusDomElement.style.display = "none";
+
+			}
+			
+			function clickModel(choose) {
+				
+				if(choose == 0) {
+					objPath = "obj/walt/WaltHead_bin.js";
+				}
+				else if(choose == 1) {
+					objPath = "obj/walt/WaltHead_bin.js";
+				}
+				else if(choose == 2) {
+					objPath = "obj/ninja/NinjaLo_bin.js";
+				}
+				else if(choose == 3) {
+					objPath = "obj/female02/Female02_bin.js";
+				}
+				else if(choose == 4) {
+					objPath = "obj/male02/Male02_bin.js";
+				}
+				else if(choose == 5) {
+					objPath = "obj/lucy/Lucy100k_bin.js";
+				}
+				else if(choose == 6) {
+					objPath = "obj/veyron/VeyronNoUv_bin.js";
+				}
+				else if(choose == 7) {
+					objPath = "obj/camaro/CamaroNoUv_bin.js";
+				}
+				else if(choose == 8) {
+					objPath = "obj/f50/F50NoUv_bin.js";
+				}
+				else {
+					objPath = "obj/walt/WaltHead_bin.js";
+				}
+				
+				loadModel();
+			}
+			
+			function clickSkybox(choose) {
+				var path;
+				var format;
+				
+				if(choose == 0) {
+					path = "textures/cube/Bridge2/";
+					format = ".jpg";
+				}
+				else if(choose == 1) {
+					path = "textures/cube/Escher/";
+					format = ".jpg";
+				}
+				else if(choose == 2) {
+					path = "textures/cube/Park2/";
+					format = ".jpg";
+				}
+				else if(choose == 3) {
+					path = "textures/cube/pisa/";
+					format = ".png";
+				}
+				else if(choose == 4) {
+					path = "textures/cube/skybox/";
+					format = ".jpg";
+				}
+				else if(choose == 5) {
+					path = "textures/cube/SwedishRoyalCastle/";
+					format = ".jpg";
+				}
+				else {
+					path = "textures/cube/SwedishRoyalCastle/";
+					format = ".jpg";
+				}
+				
+				var urls = [path + 'px' + format, path + 'nx' + format, 
+				            path + 'py' + format, path + 'ny' + format, 
+				            path + 'pz' + format, path + 'nz' + format];
+
+				envTexture = THREE.ImageUtils.loadTextureCube(urls);
+				
+				skybox();
+				loadModel();
+			}
+
+			function onDocumentMouseDown(event) {
+				event.preventDefault();
+				isMouseDown = true;
+				onMouseDownTheta = theta;
+				onMouseDownPhi = phi;
+				onMouseDownPosition.x = event.clientX;
+				onMouseDownPosition.y = event.clientY;
+			}
+
+			function onDocumentMouseMove(event) {
+				if(isMouseDown) {
+					theta = -((event.clientX - onMouseDownPosition.x ) * 0.5 ) + onMouseDownTheta;
+					phi = ((event.clientY - onMouseDownPosition.y ) * 0.5 ) + onMouseDownPhi;
+					phi = Math.min(90, Math.max(-90, phi));
+
+					//mouseX = (event.clientX - windowHalfX ) * 4;
+					//mouseY = (event.clientY - windowHalfY ) * 4;
+				}
+			}
+
+			function onDocumentMouseUp(event) {
+				event.preventDefault();
+				isMouseDown = false;
+				//onMouseDownPosition.x = event.clientX - onMouseDownPosition.x;
+				//onMouseDownPosition.y = event.clientY - onMouseDownPosition.y;
+			}
+
+			function onDocumentMouseWheel(event) {
+				if(event.wheelDeltaY) {
+					radious -= event.wheelDeltaY * 1;
+					// Opera / Explorer 9
+				} else if(event.wheelDelta) {
+					radious -= event.wheelDelta * 1;
+					// Firefox
+				} else if(event.detail) {
+					radious += event.detail * 10.0;
+				}
+				radious = Math.min(3500, Math.max(1000, radious));
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame(animate);
+
+				render();
+				stats.update();
+
+			}
+
+			function render() {
+
+				var timer = -new Date().getTime() * 0.0002;
+				
+				camera.position.x = radious * Math.sin(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+				camera.position.y = radious * Math.sin(phi * Math.PI / 360);
+				camera.position.z = radious * Math.cos(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+				camera.updateMatrix();
+				//camera.position.x += (mouseX - camera.position.x ) * .05;
+				//camera.position.y += (-mouseY - camera.position.y ) * .05;
+
+				camera.lookAt(scene.position);
+
+				cubeTarget.x = -camera.position.x;
+				cubeTarget.y = -camera.position.y;
+				cubeTarget.z = -camera.position.z;
+
+				cameraCube.lookAt(cubeTarget);
+
+				lightMesh.position.x = 1500 * Math.cos(timer);
+				lightMesh.position.z = 1500 * Math.sin(timer);
+				
+				for ( var i = 0, il = spheres.length; i < il; i ++ ) {
+
+					var sphere = spheres[ i ];
+
+					sphere.position.x = 5000 * Math.cos( timer + i );
+					sphere.position.y = 5000 * Math.sin( timer + i * 1.1 );
+
+				}
+
+				renderer.clear();
+				renderer.render(sceneCube, cameraCube);
+				renderer.render(scene, camera);
+
+			}
+		</script>
+
+	</body>
+	
+	<style type="text/css">
+body
+{
+overflow: hidden;
+background-color: #000;
+}
+
+.main
+{
+border-style: solid;
+border-width: 1.0px;
+border-color: black;
+margin-left: 0%;
+margin-top: 0%;
+width: 70%;
+height: 70%;
+overflow: hidden;
+}
+
+.models
+{
+border-style: solid;
+border-width: 2px;
+border-color: black;
+margin-left: 73%;
+margin-top: -47%;
+padding: 5px;
+width: 25%;
+height: 38%;
+overflow: auto;
+}
+
+.environments
+{
+border-style: solid;
+border-width: 2px;
+border-color: black;
+margin-left: 73%;
+margin-top: 1%;
+padding: 5px;
+width: 25%;
+height: 38%;
+overflow: auto;
+}
+/* CSS for Image Effects
+Reference: http://www.sohtanaka.com/web-design/fancy-thumbnail-hover-effect-w-jquery/
+*/
+ul.thumb {
+float: left;
+list-style: none;
+margin: 0; padding: 8px;
+width: 300px;
+}
+ul.thumb li {
+margin: 0; padding: 40px;
+float: left;
+position: relative;  /* Set the absolute positioning base coordinate */
+width: 20px;
+height: 20px;
+}
+ul.thumb li img {
+width: 70px; height: 70px; /* Set the small thumbnail size */
+-ms-interpolation-mode: bicubic; /* IE Fix for Bicubic Scaling */
+border: 1px solid #ddd;
+padding: 1px;
+background: #f0f0f0;
+position: absolute;
+left: 0; top: 0;
+}
+ul.thumb li img.hover {
+/*background:url(thumb_bg.png) no-repeat center center;  /* Image used as background on hover effect
+border: none; Get rid of border on hover */
+}
+	</style>
+</html>
