@@ -2,62 +2,74 @@
 	<head>
 		<title> CS580 - Final project </title>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.js"></script>
 		<script type="text/javascript" src="/projects/qtip/js/jquery.qtip-1.0.0.min.js"></script>
-
 		<script src="js/Three.js"></script>
 		<script src="js/Detector.js"></script>
 		<script src="js/RequestAnimationFrame.js"></script>
-
+		<script type="text/javascript" src="car/lib/jquery.jcarousel.min.js"></script> 
+		<link rel="stylesheet" type="text/css" href="car/skins/tango/skin.css" /> 
+ 
 		<script type="text/javascript">
 			var MODELS = {
 			"Head" : {
 					name: "Walt Disney Head",
 					objPath: "obj/walt/WaltHead_bin.js",
-					init_rotation: [ 0, 0, 0 ],
-					scale: 5.5,
+					scale: 10.5,
+					x: 0,
+					y: 0,
+					z: 0,
 					object: null,
 					materials: null
 			},
 			"Female" : {
 					name: "Female",
 					objPath: "obj/female02/Female02_bin.js",
-					init_rotation: [ 0, 0, 0 ],
-					scale: 5.5,
+					scale: 8.5,
+					x: 0,
+					y: -800,
+					z: 0,
 					object: null,
 					materials: null
 			},
 			"Male" : {
 					name: "Male",
 					objPath: "obj/male02/Male02_bin.js",
-					init_rotation: [ 0, 0, 0 ],
-					scale: 5.5,
+					scale: 9.0,
+					x: 0,
+					y: -850,
+					z: 0,
 					object: null,
 					materials: null
 			},
 			"Lucy" : {
 					name: "Lucy",
 					objPath: "obj/lucy/Lucy100k_bin.js",
-					init_rotation: [ 0, 0, 0 ],
-					scale: 5.5,
+					scale: 1.0,
+					x: 0,
+					y: 0,
+					z: 0,
 					object: null,
 					materials: null
 			},
 			"Veyron" : {
 					name:	"Bugatti Veyron",
 					objPath: 	"obj/veyron/VeyronNoUv_bin.js",
-					init_rotation: [ 0, 0, 0 ],
-					scale: 5.5,
+					scale: 8.0,
+					x: 0,
+					y: 0,
+					z: 0,
 					object: null,
 					materials: null
 			},
 			"Camaro" : {
 					name: 	"Chevrolet Camaro",
 					objPath:	"obj/camaro/CamaroNoUv_bin.js",
-					init_rotation: [ 0.0, 0.0, 0.0 /*0, 1, 0*/ ],
-					scale: 75,
+					scale: 100,
 					object:	null,
+					x: 0,
+					y: 0,
+					z: 0,
 					materials: null
 			}
 			};
@@ -68,42 +80,32 @@
 					url:	"textures/cube/Bridge2/",
 					object:	null
 			},
-			"Escher" : {
-					name: 	"Escher",
-					url:	"textures/cube/Escher/",
+			"Castle" : {
+					name: 	"Castle",
+					url:	"textures/cube/SwedishRoyalCastle/",
 					object:	null
 			},
 			"Park" : {
 					name: 	"Park",
 					url:	"textures/cube/Park2/",
 					object:	null
+			},
+			"Park1" : {
+					name: 	"Park1",
+					url:	"textures/cube/Park1/",
+					object:	null
+			},
+			"Pisa" : {
+					name: 	"Pisa",
+					url:	"textures/cube/pisa/",
+					object:	null
 			}
 			};
 			
 			$(document).ready(function() {
-				$("ul.thumb li").hover(function() {
-					$(this).css({
-						'z-index' : '10'
-					});
-					/*Add a higher z-index value so this image stays on top*/
-					$(this).find('img').addClass("hover").stop()/* Add class of "hover", then stop animation queue buildup*/.animate({
-						width : '80px', /* Set new width */
-						height : '80px', /* Set new height */
-						padding : '5px'
-					}, 400);
-					/* this value of "200" is the speed of how fast/slow this hover animates */
+				jQuery('#modCarousel').jcarousel();
+				jQuery('#envCarousel').jcarousel();
 
-				}, function() {
-					$(this).css({
-						'z-index' : '0'
-					});
-					/* Set z-index back to 0 */
-					$(this).find('img').removeClass("hover").stop()/* Remove the "hover" class , then stop animation queue buildup*/.animate({
-						width : '70px', /* Set width back to default */
-						height : '70px', /* Set height back to default */
-						padding : '2px'
-					}, 200);
-				});
 				
 			var container;
 			var camera, scene, renderer;
@@ -114,9 +116,10 @@
 			var reflectionCube;
 			var mouseX = 0;
 			var mouseY = 0;
+			var rotateEnabled = 0;
 			var isMouseDown = false;
 			var modID = "Head";
-			
+			var cubeMaterial1;
 			var onMouseDownPosition, 
 			radius = 2000, 
 			theta = 45, 
@@ -132,7 +135,12 @@
 
 			init();
 			animate();
-			var cubeMaterial1;
+			$(document).keypress(function(e) {
+    				if(e.keyCode == 13) {
+       				 rotateEnabled = 1;
+  					  }
+				});
+
 			function init() {
 				set1 = 1;
 				container = document.getElementById("webgl-canvas")
@@ -216,18 +224,28 @@
 
 			}
 			function createScene(geometry, m1, model) {
+				for(var m in MODELS)
+				{
+					if (MODELS[m].object) {
+						MODELS[m].object.visible = false;
+					}
+				}
 				var mesh = new THREE.Mesh(geometry, m1);
-				mesh.position.z = -100;
-				mesh.scale.x = mesh.scale.y = mesh.scale.z = 10;
+				mesh.position.x = MODELS[model].x;
+				mesh.position.y = MODELS[model].y;
+				mesh.position.z = MODELS[model].z;
+				mesh.scale.x = mesh.scale.y = mesh.scale.z = MODELS[model].scale;
+				
 				MODELS[model].object = mesh;
 				scene.add(mesh);
-				
+
 				loader.statusDomElement.style.display = "none";
 
 			}
 
 			function onDocumentMouseDown(event) {
 				event.preventDefault();
+				rotateEnabled=0;
 				isMouseDown = true;
 				onMouseDownTheta = theta;
 				onMouseDownPhi = phi;
@@ -265,11 +283,10 @@
 				modID = String(this.id);
 				for(var m in MODELS)
 				{
-					if ( m != modID && MODELS[m].object ) {
+					if( m!=modID && MODELS[m].object ) {
 						MODELS[m].object.visible = false;
 					}
 				}
-				
 				loader.load({
 					model : MODELS[modID].objPath,
 					callback : function(geometry) { createScene(geometry, cubeMaterial1, modID)
@@ -278,20 +295,22 @@
 			});
 			
 			$(".environments li").click(function(){
-
-				alert(this.id);
 				var envID = String(this.id);
 				var path = ENVIRONMENTS[envID].url;
 				var format = '.jpg';
 				var urls = [path + 'px' + format, path + 'nx' + format, path + 'py' + format, path + 'ny' + format, path + 'pz' + format, path + 'nz' + format];
 				var x = loadCube(path,format,urls);
-				for(var m in MODELS)
+				/*for(var m in MODELS)
 				{
 					if (MODELS[m].object) {
 						MODELS[m].object.visible = false;
 					}
-				}
-				
+				}*/
+				loader.load({
+					model : MODELS[modID].objPath,
+					callback : function(geometry) { createScene(geometry, cubeMaterial1, modID)
+					}
+				});
 			});
 			
 			//Animate
@@ -301,12 +320,23 @@
 			}
 
 			function render() {
-			
+		
+			var timer = -0.0002 * Date.now();
+			var s = 10;
+				if(rotateEnabled==1)
+				{
+				camera.position.y += ( - mouseY - camera.position.y ) * .05;
+				camera.position.x = radius * Math.cos( timer );
+				camera.position.z = radius * Math.sin( timer );
+				}
+				else
+				{
+				rotateEnabled=0;
 				camera.position.x = radius * Math.sin(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
 				camera.position.y = radius * Math.sin(phi * Math.PI / 360);
 				camera.position.z = radius * Math.cos(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+				}
 				camera.updateMatrix();
-				
 				camera.lookAt(scene.position);
 
 				cubeTarget.x = -camera.position.x;
@@ -329,100 +359,100 @@
 	</head>
 
 	<body>
-		<div id = "webgl-canvas">
+		<div id = "webgl-canvas" style="width: 890px; height: 540px;">
 		</div>
+			<div id = "right">
+			<p> MODELS </p>
 			<div class="models">
-				<ul class="thumb">
+				<ul id="modCarousel" class="jcarousel-skin-tango">
 					<li id="Head">
-						<a href="#"><img src="" alt="Head" /></a>
+						<a href="#"><img src="img/head.png" alt="Head" height="75" width="75" /></a>
 					</li>
 					<li id="Female">
-						<a href="#"><img src="" alt="Female" /></a>
+						<a href="#"><img src="img/female.png" alt="Female"  height="75" width="75" /></a>
 					</li>
 					<li id="Male">
-						<a href="#"><img src="" alt="Male" /></a>
+						<a href="#"><img src="img/male.png" alt="Male"  height="75" width="75" /></a>
 					</li>
-				</ul>
-				<ul class="thumb">
 					<li id="Lucy">
-						<a href="#"><img src="" alt="Lucy" /></a>
+						<a href="#"><img src="img/lucy.png" alt="Lucy"  height="75" width="75" /></a>
 					</li>
 					<li id="Veyron">
-						<a href="#"><img src="" alt="Veyron" /></a>
+						<a href="#"><img src="img/veyron.png" alt="Veyron"  height="75" width="75" /></a>
 					</li>
 					<li id="Camaro">
-						<a href="#"><img src="" alt="Camaro" /></a>
+						<a href="#"><img src="img/camaro.png" alt="Camaro"  height="75" width="75" /></a>
 					</li>
 				</ul>
-				<!--ul class="thumb">
-					<li>
-						<a href="#"><img src="" alt="Veyron" /></a>
-					</li>
-					<li>
-						<a href="#"><img src="" alt="Camero" /></a>
-					</li>
-					<li>
-						<a href="#"><img src="" alt="F50" /></a>
-					</li>
-				</ul-->
 			</div>
-			<div class="environments">
-				<ul class="thumb">
+			<br />
+			<br />
+			<p> ENVIRONMENTS </p>
+			<div class="environments" class="jcarousel-skin-tango">
+				<ul id="envCarousel" class="jcarousel-skin-tango">
 					<li id="Bridge">
-						<a href="#"><img src="" alt="Bridge" /></a>
+						<a href="#Bridge"><img height="75" width="75" src="textures/cube/Bridge2/nz.jpg" alt="Bridge"/></a>
 					</li>
-					<li id="Escher">
-						<a href="#"><img src="" alt="Escher" /></a>
+					<li id="Castle">
+						<a href="#Escher"><img src="textures/cube/SwedishRoyalCastle/nz.jpg" alt="Castle"  height="75" width="75" /></a>
 					</li>
 					<li id="Park">
-						<a href="#"><img src="" alt="Park" /></a>
+						<a href="#Park"><img src="textures/cube/Park2/nz.jpg" alt="Park"  height="75" width="75"/></a>
+					</li>
+					<li id="Park1">
+						<a href="#Park1"><img src="textures/cube/Park1/nz.jpg" alt="Park1"  height="75" width="75"/></a>
+					</li>
+					<li id="Pisa">
+						<a href="#Pisa"><img src="textures/cube/pisa/nz.jpg" alt="Pisa"  height="75" width="75"/></a>
 					</li>
 				</ul>
-				<!--ul class="thumb">
-					<li>
-						<a href="#"><img src="" alt="Pisa" /></a>
-					</li>
-					<li>
-						<a href="#"><img src="" alt="Sky" /></a>
-					</li>
-					<li>
-						<a href="#"><img src="" alt="Castle" /></a>
-					</li>
-				</ul>
-				<ul class="thumb">
-					<li>
-						<a href="#"><img src="" alt="" /></a>
-					</li>
-					<li>
-						<a href="#"><img src="" alt="" /></a>
-					</li>
-					<li>
-						<a href="#"><img src="" alt="" /></a>
-					</li>
-				</ul-->
+			</div>	
+			<br /><br/>
+			<br />
+			<br />
+			<span id="footer">CS580 Final Project by Cherice Duh, Kenny Liao and Yezhisai Murugesan. </span>
 			</div>
 	</body>
 	
 	<style type="text/css">
+
 body
 {
-overflow: hidden;
-background-color: #FFF;
+background: url(bg.jpg) no-repeat center center fixed;
+        -webkit-background-size: cover;
+        -moz-background-size: cover;
+        -o-background-size: cover;
+        background-size: cover;
+        overflow: hidden;
 }
-
+#footer
+{
+text-align: center;
+font-size: 0.95em;
+color: #FFF;
+}
+p
+{
+text-align: center;
+font-size: 1.8em;
+color: #FFF;
+text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #fff, 0 0 40px #ff00de, 0 0 70px #ff00de, 0 0 80px #ff00de, 0 0 100px #ff00de, 0  0 150px #ff00de;
+}
 #webgl-canvas
 {
-/*border-style: solid;
-border-width: 1.0px;
-border-color: black;
-width: 896;
-height: 578;
-overflow: hidden;*/
 margin-left: 0%;
-margin-top: 2%;
+margin-top: 2.5%;
+-moz-box-shadow: 15px 15px 10px #000;
+-webkit-box-shadow: 15px 15px 10px #000;
+box-shadow: 15px 15px 10px #00;
 }
-
-.models
+#right
+{
+	float:right;
+	width: 350px;
+	margin-top: -550px;
+}
+/*.models
 {
 border-style: solid;
 border-width: 2px;
@@ -430,7 +460,9 @@ border-color: black;
 margin-left: 910px;
 margin-top: -535px;
 padding: 5px;
-width: 310px;
+width: 18%;
+float: left;
+310px;
 height: 230px;
 overflow: scroll;
 }
@@ -446,35 +478,6 @@ padding: 5px;
 width: 310px;
 height: 230px;
 overflow: scroll;
-}
-/* CSS for Image Effects
-Reference: http://www.sohtanaka.com/web-design/fancy-thumbnail-hover-effect-w-jquery/
-*/
-ul.thumb {
-float: left;
-list-style: none;
-margin: 0; padding: 8px;
-width: 300px;
-}
-ul.thumb li {
-margin: 0; padding: 40px;
-float: left;
-position: relative;  /* Set the absolute positioning base coordinate */
-width: 20px;
-height: 20px;
-}
-ul.thumb li img {
-width: 70px; height: 70px; /* Set the small thumbnail size */
--ms-interpolation-mode: bicubic; /* IE Fix for Bicubic Scaling */
-border: 1px solid #ddd;
-padding: 1px;
-background: #f0f0f0;
-position: absolute;
-left: 0; top: 0;
-}
-ul.thumb li img.hover {
-/*background:url(thumb_bg.png) no-repeat center center;  /* Image used as background on hover effect
-border: none; Get rid of border on hover */
-}
+}*/
 	</style>
 </html>
