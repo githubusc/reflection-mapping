@@ -1,0 +1,483 @@
+<!doctype html>
+	<head>
+		<title> CS580 - Final project </title>
+		<meta charset="utf-8">
+		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.js"></script>
+		<script type="text/javascript" src="/projects/qtip/js/jquery.qtip-1.0.0.min.js"></script>
+		<script src="js/Three.js"></script>
+		<script src="js/Detector.js"></script>
+		<script src="js/RequestAnimationFrame.js"></script>
+		<script type="text/javascript" src="car/lib/jquery.jcarousel.min.js"></script> 
+		<link rel="stylesheet" type="text/css" href="car/skins/tango/skin.css" /> 
+ 
+		<script type="text/javascript">
+			var MODELS = {
+			"Head" : {
+					name: "Walt Disney Head",
+					objPath: "obj/walt/WaltHead_bin.js",
+					scale: 10.5,
+					x: 0,
+					y: 0,
+					z: 0,
+					object: null,
+					materials: null
+			},
+			"Female" : {
+					name: "Female",
+					objPath: "obj/female02/Female02_bin.js",
+					scale: 8.5,
+					x: 0,
+					y: -800,
+					z: 0,
+					object: null,
+					materials: null
+			},
+			"Male" : {
+					name: "Male",
+					objPath: "obj/male02/Male02_bin.js",
+					scale: 9.0,
+					x: 0,
+					y: -850,
+					z: 0,
+					object: null,
+					materials: null
+			},
+			"Lucy" : {
+					name: "Lucy",
+					objPath: "obj/lucy/Lucy100k_bin.js",
+					scale: 1.0,
+					x: 0,
+					y: 0,
+					z: 0,
+					object: null,
+					materials: null
+			},
+			"Veyron" : {
+					name:	"Bugatti Veyron",
+					objPath: 	"obj/veyron/VeyronNoUv_bin.js",
+					scale: 8.0,
+					x: 0,
+					y: 0,
+					z: 0,
+					object: null,
+					materials: null
+			},
+			"Camaro" : {
+					name: 	"Chevrolet Camaro",
+					objPath:	"obj/camaro/CamaroNoUv_bin.js",
+					scale: 100,
+					object:	null,
+					x: 0,
+					y: 0,
+					z: 0,
+					materials: null
+			}
+			};
+			
+			var ENVIRONMENTS = {
+			"Bridge" : {
+					name: 	"Bridge",
+					url:	"textures/cube/Bridge2/",
+					object:	null
+			},
+			"Castle" : {
+					name: 	"Castle",
+					url:	"textures/cube/SwedishRoyalCastle/",
+					object:	null
+			},
+			"Park" : {
+					name: 	"Park",
+					url:	"textures/cube/Park2/",
+					object:	null
+			},
+			"Park1" : {
+					name: 	"Park1",
+					url:	"textures/cube/Park1/",
+					object:	null
+			},
+			"Pisa" : {
+					name: 	"Pisa",
+					url:	"textures/cube/pisa/",
+					object:	null
+			}
+			};
+			
+			$(document).ready(function() {
+				jQuery('#modCarousel').jcarousel();
+				jQuery('#envCarousel').jcarousel();
+
+				
+			var container;
+			var camera, scene, renderer;
+			var cameraCube, sceneCube, cubeTarget;
+			var mesh, zmesh, lightMesh, geometry;
+			var loader,set1,walthead;
+			var directionalLight, pointLight;
+			var reflectionCube;
+			var mouseX = 0;
+			var mouseY = 0;
+			var rotateEnabled = 0;
+			var isMouseDown = false;
+			var modID = "Head";
+			var cubeMaterial1;
+			var onMouseDownPosition, 
+			radius = 2000, 
+			theta = 45, 
+			onMouseDownTheta = 45, 
+			phi = 60, 
+			onMouseDownPhi = 60;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+			if(!Detector.webgl)
+				Detector.addGetWebGLMessage();
+
+			init();
+			animate();
+			$(document).keypress(function(e) {
+    				if(e.keyCode == 13) {
+       				 rotateEnabled = 1;
+  					  }
+				});
+
+			function init() {
+				set1 = 1;
+				container = document.getElementById("webgl-canvas")
+				
+				//Zoom in/out - Change 1st attribute i.e FOV of PerspectiveCamera
+				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 3000);
+
+				//Camera
+				camera.position.x = radius * Math.sin(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+				camera.position.y = radius * Math.sin(phi * Math.PI / 360);
+				camera.position.z = radius * Math.cos(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+
+				//Disable cameraCube in render() if you don't want the scene and only the model to move.
+				cameraCube = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 100);
+			
+				cubeTarget = new THREE.Vector3(0, 0, 0);
+
+				scene = new THREE.Scene();
+				sceneCube = new THREE.Scene();
+
+				onMouseDownPosition = new THREE.Vector2();
+
+				// LIGHTS
+				//Add lights
+				
+				var path = ENVIRONMENTS["Park"].url;
+				var format = '.jpg';
+				var urls = [path + 'px' + format, path + 'nx' + format, path + 'py' + format, path + 'ny' + format, path + 'pz' + format, path + 'nz' + format];
+
+				loadCube(path,format,urls);
+				
+				//Web GL renderer
+
+				renderer = new THREE.WebGLRenderer();
+				//Scale scene
+				renderer.setSize(window.innerWidth * 0.7, window.innerHeight*0.9);
+				renderer.autoClear = false;
+				container.appendChild(renderer.domElement);
+
+				//Loader
+
+				loader = new THREE.BinaryLoader(true);
+				document.body.appendChild(loader.statusDomElement);
+				
+				loader.load({
+					model : MODELS[modID].objPath,
+					callback : function(geometry) { createScene(geometry, cubeMaterial1,modID)
+					}
+				});
+				
+				document.addEventListener('mousemove', onDocumentMouseMove, false);
+				container.addEventListener('mousedown', onDocumentMouseDown, false);
+				document.addEventListener('mouseup', onDocumentMouseUp, false);
+				document.addEventListener('mousewheel', onDocumentMouseWheel, false);
+				document.addEventListener('DOMMouseScroll', onDocumentMouseWheel, false);
+			}
+			function loadCube(path,format,urls)
+			{
+				reflectionCube = THREE.ImageUtils.loadTextureCube(urls);
+				// Skybox
+
+				var shader = THREE.ShaderUtils.lib["cube"];
+				shader.uniforms["tCube"].texture = reflectionCube;
+
+				cubeMaterial1 = new THREE.MeshLambertMaterial({
+					color : 0xffffff,
+					envMap : reflectionCube
+				});
+				
+				var material = new THREE.ShaderMaterial({
+					fragmentShader : shader.fragmentShader,
+					vertexShader : shader.vertexShader,
+					uniforms : shader.uniforms,
+					depthWrite : false
+
+				});
+
+				var mesh = new THREE.Mesh(new THREE.CubeGeometry(100, 100, 100), material);
+				mesh.flipSided = true;
+				sceneCube.add(mesh);
+
+			}
+			function createScene(geometry, m1, model) {
+				for(var m in MODELS)
+				{
+					if (MODELS[m].object) {
+						MODELS[m].object.visible = false;
+					}
+				}
+				var mesh = new THREE.Mesh(geometry, m1);
+				mesh.position.x = MODELS[model].x;
+				mesh.position.y = MODELS[model].y;
+				mesh.position.z = MODELS[model].z;
+				mesh.scale.x = mesh.scale.y = mesh.scale.z = MODELS[model].scale;
+				
+				MODELS[model].object = mesh;
+				scene.add(mesh);
+
+				loader.statusDomElement.style.display = "none";
+
+			}
+
+			function onDocumentMouseDown(event) {
+				event.preventDefault();
+				rotateEnabled=0;
+				isMouseDown = true;
+				onMouseDownTheta = theta;
+				onMouseDownPhi = phi;
+				onMouseDownPosition.x = event.clientX;
+				onMouseDownPosition.y = event.clientY;
+			}
+
+			function onDocumentMouseMove(event) {
+				if(isMouseDown) {
+					theta = -((event.clientX - onMouseDownPosition.x ) * 0.5 ) + onMouseDownTheta;
+					phi = ((event.clientY - onMouseDownPosition.y ) * 0.5 ) + onMouseDownPhi;
+					phi = Math.min(90, Math.max(-90, phi));
+				}
+			}
+
+			function onDocumentMouseUp(event) {
+				event.preventDefault();
+				isMouseDown = false;
+			}
+
+			function onDocumentMouseWheel(event) {
+				if(event.wheelDeltaY) {
+					radius -= event.wheelDeltaY * 1;
+					// Opera / Explorer 9
+				} else if(event.wheelDelta) {
+					radius -= event.wheelDelta * 1;
+					// Firefox
+				} else if(event.detail) {
+					radius += event.detail * 10.0;
+				}
+				radius = Math.min(3500, Math.max(1000, radius));
+			}
+			
+			$(".models li").click(function(){
+				modID = String(this.id);
+				for(var m in MODELS)
+				{
+					if( m!=modID && MODELS[m].object ) {
+						MODELS[m].object.visible = false;
+					}
+				}
+				loader.load({
+					model : MODELS[modID].objPath,
+					callback : function(geometry) { createScene(geometry, cubeMaterial1, modID)
+					}
+				});
+			});
+			
+			$(".environments li").click(function(){
+				var envID = String(this.id);
+				var path = ENVIRONMENTS[envID].url;
+				var format = '.jpg';
+				var urls = [path + 'px' + format, path + 'nx' + format, path + 'py' + format, path + 'ny' + format, path + 'pz' + format, path + 'nz' + format];
+				var x = loadCube(path,format,urls);
+				/*for(var m in MODELS)
+				{
+					if (MODELS[m].object) {
+						MODELS[m].object.visible = false;
+					}
+				}*/
+				loader.load({
+					model : MODELS[modID].objPath,
+					callback : function(geometry) { createScene(geometry, cubeMaterial1, modID)
+					}
+				});
+			});
+			
+			//Animate
+			function animate() {
+				requestAnimationFrame(animate);
+				render();
+			}
+
+			function render() {
+		
+			var timer = -0.0002 * Date.now();
+			var s = 10;
+				if(rotateEnabled==1)
+				{
+				camera.position.y += ( - mouseY - camera.position.y ) * .05;
+				camera.position.x = radius * Math.cos( timer );
+				camera.position.z = radius * Math.sin( timer );
+				}
+				else
+				{
+				rotateEnabled=0;
+				camera.position.x = radius * Math.sin(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+				camera.position.y = radius * Math.sin(phi * Math.PI / 360);
+				camera.position.z = radius * Math.cos(theta * Math.PI / 360) * Math.cos(phi * Math.PI / 360);
+				}
+				camera.updateMatrix();
+				camera.lookAt(scene.position);
+
+				cubeTarget.x = -camera.position.x;
+				cubeTarget.y = -camera.position.y;
+				cubeTarget.z = -camera.position.z;
+
+				cameraCube.lookAt(cubeTarget);
+
+				renderer.clear();
+				
+				renderer.render(sceneCube, cameraCube);
+				renderer.render(scene, camera);
+
+			}
+				
+			});
+
+		</script>
+		
+	</head>
+
+	<body>
+		<div id = "webgl-canvas" style="width: 890px; height: 540px;">
+		</div>
+			<div id = "right">
+			<p> MODELS </p>
+			<div class="models">
+				<ul id="modCarousel" class="jcarousel-skin-tango">
+					<li id="Head">
+						<a href="#"><img src="img/head.png" alt="Head" height="75" width="75" /></a>
+					</li>
+					<li id="Female">
+						<a href="#"><img src="img/female.png" alt="Female"  height="75" width="75" /></a>
+					</li>
+					<li id="Male">
+						<a href="#"><img src="img/male.png" alt="Male"  height="75" width="75" /></a>
+					</li>
+					<li id="Lucy">
+						<a href="#"><img src="img/lucy.png" alt="Lucy"  height="75" width="75" /></a>
+					</li>
+					<li id="Veyron">
+						<a href="#"><img src="img/veyron.png" alt="Veyron"  height="75" width="75" /></a>
+					</li>
+					<li id="Camaro">
+						<a href="#"><img src="img/camaro.png" alt="Camaro"  height="75" width="75" /></a>
+					</li>
+				</ul>
+			</div>
+			<br />
+			<br />
+			<p> ENVIRONMENTS </p>
+			<div class="environments" class="jcarousel-skin-tango">
+				<ul id="envCarousel" class="jcarousel-skin-tango">
+					<li id="Bridge">
+						<a href="#Bridge"><img height="75" width="75" src="textures/cube/Bridge2/nz.jpg" alt="Bridge"/></a>
+					</li>
+					<li id="Castle">
+						<a href="#Escher"><img src="textures/cube/SwedishRoyalCastle/nz.jpg" alt="Castle"  height="75" width="75" /></a>
+					</li>
+					<li id="Park">
+						<a href="#Park"><img src="textures/cube/Park2/nz.jpg" alt="Park"  height="75" width="75"/></a>
+					</li>
+					<li id="Park1">
+						<a href="#Park1"><img src="textures/cube/Park1/nz.jpg" alt="Park1"  height="75" width="75"/></a>
+					</li>
+					<li id="Pisa">
+						<a href="#Pisa"><img src="textures/cube/pisa/nz.jpg" alt="Pisa"  height="75" width="75"/></a>
+					</li>
+				</ul>
+			</div>	
+			<br /><br/>
+			<br />
+			<br />
+			<span id="footer">CS580 Final Project by Cherice Duh, Kenny Liao and Yezhisai Murugesan. </span>
+			</div>
+	</body>
+	
+	<style type="text/css">
+
+body
+{
+background: url(bg.jpg) no-repeat center center fixed;
+        -webkit-background-size: cover;
+        -moz-background-size: cover;
+        -o-background-size: cover;
+        background-size: cover;
+        overflow: hidden;
+}
+#footer
+{
+text-align: center;
+font-size: 0.95em;
+color: #FFF;
+}
+p
+{
+text-align: center;
+font-size: 1.8em;
+color: #FFF;
+text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #fff, 0 0 40px #ff00de, 0 0 70px #ff00de, 0 0 80px #ff00de, 0 0 100px #ff00de, 0  0 150px #ff00de;
+}
+#webgl-canvas
+{
+margin-left: 0%;
+margin-top: 2.5%;
+-moz-box-shadow: 15px 15px 10px #000;
+-webkit-box-shadow: 15px 15px 10px #000;
+box-shadow: 15px 15px 10px #00;
+}
+#right
+{
+	float:right;
+	width: 350px;
+	margin-top: -550px;
+}
+/*.models
+{
+border-style: solid;
+border-width: 2px;
+border-color: black;
+margin-left: 910px;
+margin-top: -535px;
+padding: 5px;
+width: 18%;
+float: left;
+310px;
+height: 230px;
+overflow: scroll;
+}
+
+.environments
+{
+border-style: solid;
+border-width: 2px;
+border-color: black;
+margin-left: 910px;
+margin-top: 30px;
+padding: 5px;
+width: 310px;
+height: 230px;
+overflow: scroll;
+}*/
+	</style>
+</html>
